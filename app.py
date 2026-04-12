@@ -48,6 +48,16 @@ def init_db():
             created  TEXT DEFAULT CURRENT_TIMESTAMP
         )
     """)
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS requests (
+            id      INTEGER PRIMARY KEY AUTOINCREMENT,
+            name    TEXT,
+            subject TEXT NOT NULL,
+            message TEXT NOT NULL,
+            status  TEXT DEFAULT 'pending',
+            created TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
     db.commit()
     db.close()
 
@@ -126,6 +136,27 @@ def download(note_id):
     db.close()
     return send_from_directory(app.config["UPLOAD_FOLDER"], note["filename"], as_attachment=True)
 
+@app.route("/request-notes", methods=["GET", "POST"])
+def request_notes():
+    if request.method == "POST":
+        name    = request.form.get("name", "Anonymous").strip()
+        subject = request.form.get("subject", "").strip()
+        message = request.form.get("message", "").strip()
+        if not subject or not message:
+            flash("Please fill in subject and message.", "error")
+            return redirect(url_for("request_notes"))
+        db = get_db()
+        db.execute("INSERT INTO requests (name, subject, message) VALUES (?,?,?)",
+                   (name or "Anonymous", subject, message))
+        db.commit()
+        db.close()
+        flash("Your request has been sent! We will make those notes soon.", "success")
+        return redirect(url_for("request_notes"))
+    db = get_db()
+    reqs = db.execute("SELECT * FROM requests ORDER BY created DESC").fetchall()
+    db.close()
+    return render_template("request_notes.html", requests=reqs)
+
 @app.route("/admin", methods=["GET", "POST"])
 def admin():
     if request.method == "POST":
@@ -143,11 +174,13 @@ def admin():
 def admin_panel():
     if not is_admin():
         return redirect(url_for("admin"))
-    db     = get_db()
-    notes  = db.execute("SELECT * FROM notes  ORDER BY created DESC").fetchall()
-    videos = db.execute("SELECT * FROM videos ORDER BY created DESC").fetchall()
+    db       = get_db()
+    notes    = db.execute("SELECT * FROM notes  ORDER BY created DESC").fetchall()
+    videos   = db.execute("SELECT * FROM videos ORDER BY created DESC").fetchall()
+    requests = db.execute("SELECT * FROM requests ORDER BY created DESC").fetchall()
+    pending  = db.execute("SELECT COUNT(*) FROM requests WHERE status='pending'").fetchone()[0]
     db.close()
-    return render_template("admin_panel.html", notes=notes, videos=videos)
+    return render_template("admin_panel.html", notes=notes, videos=videos, requests=requests, pending=pending)
 
 @app.route("/admin/upload-note", methods=["POST"])
 def upload_note():
@@ -224,62 +257,6 @@ def delete_video(vid_id):
     flash("Video deleted.", "success")
     return redirect(url_for("admin_panel"))
 
-@app.route("/admin/logout")
-def admin_logout():
-    session.clear()
-    return redirect(url_for("home"))
-
-if __name__ == "__main__":
-    app.run(debug=True)
-
-# ─── REQUESTS TABLE ───────────────────────────────────────
-def init_requests_db():
-    db = get_db()
-    db.execute("""
-        CREATE TABLE IF NOT EXISTS requests (
-            id      INTEGER PRIMARY KEY AUTOINCREMENT,
-            name    TEXT,
-            subject TEXT NOT NULL,
-            message TEXT NOT NULL,
-            status  TEXT DEFAULT 'pending',
-            created TEXT DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-    db.commit()
-    db.close()
-
-init_requests_db()
-
-@app.route("/request-notes", methods=["GET", "POST"])
-def request_notes():
-    if request.method == "POST":
-        name    = request.form.get("name", "Anonymous").strip()
-        subject = request.form.get("subject", "").strip()
-        message = request.form.get("message", "").strip()
-        if not subject or not message:
-            flash("Please fill in subject and message.", "error")
-            return redirect(url_for("request_notes"))
-        db = get_db()
-        db.execute("INSERT INTO requests (name, subject, message) VALUES (?,?,?)",
-                   (name or "Anonymous", subject, message))
-        db.commit()
-        db.close()
-        flash("Your request has been sent! We will make those notes soon.", "success")
-        return redirect(url_for("request_notes"))
-    db = get_db()
-    reqs = db.execute("SELECT * FROM requests ORDER BY created DESC").fetchall()
-    db.close()
-    return render_template("request_notes.html", requests=reqs)
-
-@app.route("/admin/requests")
-def admin_requests():
-    if not is_admin():
-        return redirect(url_for("admin"))
-    db   = get_db()
-    reqs = db.execute("SELECT * FROM requests ORDER BY created DESC").fetchall()
-    db.close()
-    return render_template("admin_requests.html", requests=reqs)
-
 @app.route("/admin/delete-request/<int:req_id>", methods=["POST"])
 def delete_request(req_id):
     if not is_admin():
@@ -289,7 +266,7 @@ def delete_request(req_id):
     db.commit()
     db.close()
     flash("Request deleted.", "success")
-    return redirect(url_for("admin_requests"))
+    return redirect(url_for("admin_panel"))
 
 @app.route("/admin/mark-done/<int:req_id>", methods=["POST"])
 def mark_done(req_id):
@@ -300,4 +277,12 @@ def mark_done(req_id):
     db.commit()
     db.close()
     flash("Marked as done!", "success")
-    return redirect(url_for("admin_requests"))
+    return redirect(url_for("admin_panel"))
+
+@app.route("/admin/logout")
+def admin_logout():
+    session.clear()
+    return redirect(url_for("home"))
+
+if __name__ == "__main__":
+    app.run(debug=True)
