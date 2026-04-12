@@ -231,3 +231,73 @@ def admin_logout():
 
 if __name__ == "__main__":
     app.run(debug=True)
+
+# ─── REQUESTS TABLE ───────────────────────────────────────
+def init_requests_db():
+    db = get_db()
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS requests (
+            id      INTEGER PRIMARY KEY AUTOINCREMENT,
+            name    TEXT,
+            subject TEXT NOT NULL,
+            message TEXT NOT NULL,
+            status  TEXT DEFAULT 'pending',
+            created TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    db.commit()
+    db.close()
+
+init_requests_db()
+
+@app.route("/request-notes", methods=["GET", "POST"])
+def request_notes():
+    if request.method == "POST":
+        name    = request.form.get("name", "Anonymous").strip()
+        subject = request.form.get("subject", "").strip()
+        message = request.form.get("message", "").strip()
+        if not subject or not message:
+            flash("Please fill in subject and message.", "error")
+            return redirect(url_for("request_notes"))
+        db = get_db()
+        db.execute("INSERT INTO requests (name, subject, message) VALUES (?,?,?)",
+                   (name or "Anonymous", subject, message))
+        db.commit()
+        db.close()
+        flash("Your request has been sent! We will make those notes soon.", "success")
+        return redirect(url_for("request_notes"))
+    db = get_db()
+    reqs = db.execute("SELECT * FROM requests ORDER BY created DESC").fetchall()
+    db.close()
+    return render_template("request_notes.html", requests=reqs)
+
+@app.route("/admin/requests")
+def admin_requests():
+    if not is_admin():
+        return redirect(url_for("admin"))
+    db   = get_db()
+    reqs = db.execute("SELECT * FROM requests ORDER BY created DESC").fetchall()
+    db.close()
+    return render_template("admin_requests.html", requests=reqs)
+
+@app.route("/admin/delete-request/<int:req_id>", methods=["POST"])
+def delete_request(req_id):
+    if not is_admin():
+        return redirect(url_for("admin"))
+    db = get_db()
+    db.execute("DELETE FROM requests WHERE id = ?", (req_id,))
+    db.commit()
+    db.close()
+    flash("Request deleted.", "success")
+    return redirect(url_for("admin_requests"))
+
+@app.route("/admin/mark-done/<int:req_id>", methods=["POST"])
+def mark_done(req_id):
+    if not is_admin():
+        return redirect(url_for("admin"))
+    db = get_db()
+    db.execute("UPDATE requests SET status = 'done' WHERE id = ?", (req_id,))
+    db.commit()
+    db.close()
+    flash("Marked as done!", "success")
+    return redirect(url_for("admin_requests"))
