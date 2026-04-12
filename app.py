@@ -1,22 +1,20 @@
 from flask import Flask, render_template, request, redirect, url_for, session, send_from_directory, flash, jsonify
 from werkzeug.utils import secure_filename
-from werkzeug.security import generate_password_hash, check_password_hash
 import sqlite3, os, datetime
 
 app = Flask(__name__)
 
-# ─── CONFIG ───────────────────────────────────────────────
-app.secret_key = "change-this-to-a-random-secret-key-123"
-UPLOAD_FOLDER  = "uploads"
-ALLOWED_EXT    = {"pdf", "doc", "docx", "ppt", "pptx"}
+app.secret_key = "quicknotes-secret-key-2025"
+UPLOAD_FOLDER = "uploads"
+ALLOWED_EXT   = {"pdf", "doc", "docx", "ppt", "pptx"}
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
-app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024  # 50 MB max file size
+app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024
 
-# Admin credentials  ← CHANGE THESE before going live!
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
 ADMIN_EMAIL    = "admin@quicknotes.com"
 ADMIN_PASSWORD = "admin123"
 
-# ─── DATABASE SETUP ───────────────────────────────────────
 def get_db():
     db = sqlite3.connect("quicknotes.db")
     db.row_factory = sqlite3.Row
@@ -53,14 +51,13 @@ def init_db():
     db.commit()
     db.close()
 
-# ─── HELPERS ──────────────────────────────────────────────
+init_db()
+
 def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXT
 
 def is_admin():
     return session.get("admin") == True
-
-# ─── PUBLIC ROUTES ────────────────────────────────────────
 
 @app.route("/")
 def home():
@@ -128,8 +125,6 @@ def download(note_id):
     db.commit()
     db.close()
     return send_from_directory(app.config["UPLOAD_FOLDER"], note["filename"], as_attachment=True)
-
-# ─── ADMIN ROUTES ─────────────────────────────────────────
 
 @app.route("/admin", methods=["GET", "POST"])
 def admin():
@@ -234,8 +229,5 @@ def admin_logout():
     session.clear()
     return redirect(url_for("home"))
 
-# ─── RUN ──────────────────────────────────────────────────
 if __name__ == "__main__":
-    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-    init_db()
     app.run(debug=True)
