@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% block title %}Admin Panel — QuickNotes{% endblock %}
+{% block content %}
+
+<div class="admin-wrap">
+  <div class="admin-top">
+    <div>
+      <h2>Admin panel</h2>
+      <p>Upload and manage all study content on QuickNotes</p>
+    </div>
+    <a href="{{ url_for('admin_logout') }}" class="btn-outline" style="padding:7px 14px;font-size:13px">Sign out</a>
+  </div>
+
+  <!-- STATS -->
+  <div class="admin-stats">
+    <div class="astat"><div class="asnum">{{ notes|length }}</div><div class="aslbl">Notes</div></div>
+    <div class="astat"><div class="asnum">{{ videos|length }}</div><div class="aslbl">Videos</div></div>
+    <div class="astat"><div class="asnum">{{ notes|sum(attribute='downloads') }}</div><div class="aslbl">Downloads</div></div>
+  </div>
+
+  <!-- UPLOAD NOTES -->
+  <div class="admin-card">
+    <h3>📄 Upload notes / PDF</h3>
+    <form method="POST" action="{{ url_for('upload_note') }}" enctype="multipart/form-data">
+      <div class="field-row">
+        <div class="field">
+          <label>Title *</label>
+          <input type="text" name="title" placeholder="e.g. Trigonometry Full Notes" required/>
+        </div>
+        <div class="field">
+          <label>Subject *</label>
+          <select name="subject">
+            <option>Maths</option><option>Physics</option><option>Chemistry</option>
+            <option>Biology</option><option>History</option><option>English</option>
+            <option>Computer Science</option><option>Economics</option>
+            <option>Geography</option><option>Political Science</option><option>General</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Level *</label>
+          <select name="level">
+            <option>School</option><option>College</option><option>Competitive</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>Description (optional)</label>
+        <textarea name="desc" placeholder="What topics does this cover? Who is it for?"></textarea>
+      </div>
+      <div class="field">
+        <label>File * (PDF, DOC, DOCX, PPT, PPTX — max 50MB)</label>
+        <div class="dropzone" onclick="document.getElementById('note-file').click()">
+          <p>Click to select file</p>
+          <p class="drop-hint">PDF, DOC, DOCX, PPT, PPTX accepted</p>
+          <div class="file-chosen" id="note-file-chosen"></div>
+        </div>
+        <input type="file" id="note-file" name="file"
+               accept=".pdf,.doc,.docx,.ppt,.pptx" required
+               onchange="document.getElementById('note-file-chosen').textContent='Selected: '+this.files[0].name"/>
+      </div>
+      <button type="submit" class="btn-solid full-w">Upload notes</button>
+    </form>
+  </div>
+
+  <!-- UPLOAD VIDEO -->
+  <div class="admin-card">
+    <h3>🎬 Add YouTube video</h3>
+    <form method="POST" action="{{ url_for('upload_video') }}">
+      <div class="field-row">
+        <div class="field">
+          <label>Title *</label>
+          <input type="text" name="title" placeholder="e.g. Calculus — Limits Explained" required/>
+        </div>
+        <div class="field">
+          <label>Subject *</label>
+          <select name="subject">
+            <option>Maths</option><option>Physics</option><option>Chemistry</option>
+            <option>Biology</option><option>History</option><option>English</option>
+            <option>Computer Science</option><option>Economics</option>
+            <option>Geography</option><option>Political Science</option><option>General</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Level *</label>
+          <select name="level">
+            <option>School</option><option>College</option><option>Competitive</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field" style="flex:2">
+          <label>YouTube URL *</label>
+          <input type="url" name="yt_url" placeholder="https://www.youtube.com/watch?v=..." required/>
+        </div>
+        <div class="field">
+          <label>Duration</label>
+          <input type="text" name="duration" placeholder="e.g. 18 min"/>
+        </div>
+      </div>
+      <div class="field">
+        <label>Description (optional)</label>
+        <textarea name="desc" placeholder="What does this video cover?"></textarea>
+      </div>
+      <button type="submit" class="btn-solid full-w" style="background:#16a34a">Add video</button>
+    </form>
+  </div>
+
+  <!-- MANAGE NOTES -->
+  {% if notes %}
+  <div class="admin-card">
+    <h3>Manage notes ({{ notes|length }})</h3>
+    <div class="manage-list">
+      {% for n in notes %}
+      <div class="manage-item">
+        <div class="manage-icon {{ n.filetype }}">{{ n.filetype|upper }}</div>
+        <div class="manage-info">
+          <div class="manage-title">{{ n.title }}</div>
+          <div class="manage-meta">{{ n.subject }} · {{ n.level }} · ⬇ {{ n.downloads }} downloads</div>
+        </div>
+        <form method="POST" action="{{ url_for('delete_note', note_id=n.id) }}"
+              onsubmit="return confirm('Delete {{ n.title }}?')">
+          <button type="submit" class="delete-btn">Delete</button>
+        </form>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- MANAGE VIDEOS -->
+  {% if videos %}
+  <div class="admin-card">
+    <h3>Manage videos ({{ videos|length }})</h3>
+    <div class="manage-list">
+      {% for v in videos %}
+      <div class="manage-item">
+        <div class="manage-icon vid">VID</div>
+        <div class="manage-info">
+          <div class="manage-title">{{ v.title }}</div>
+          <div class="manage-meta">{{ v.subject }} · {{ v.level }} {% if v.duration %}· {{ v.duration }}{% endif %}</div>
+        </div>
+        <form method="POST" action="{{ url_for('delete_video', vid_id=v.id) }}"
+              onsubmit="return confirm('Delete {{ v.title }}?')">
+          <button type="submit" class="delete-btn">Delete</button>
+        </form>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

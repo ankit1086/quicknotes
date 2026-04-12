@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Video Lessons — QuickNotes{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <h2>Video lessons</h2>
+  <p>Watch free educational videos on any subject — links straight to YouTube</p>
+</div>
+
+<form method="GET" action="{{ url_for('videos') }}" class="toolbar">
+  <div class="search-wrap">
+    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+    </svg>
+    <input type="text" name="search" value="{{ search }}" placeholder="Search QuickNotes videos..."/>
+  </div>
+  <select name="subject" onchange="this.form.submit()">
+    <option value="all" {% if sel_subj=='all' %}selected{% endif %}>All subjects</option>
+    {% for s in subjects %}
+    <option value="{{ s.subject }}" {% if sel_subj==s.subject %}selected{% endif %}>{{ s.subject }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit" class="btn-solid" style="padding:9px 18px">Search</button>
+</form>
+
+{% if videos %}
+<div class="results-info">Showing {{ videos|length }} video{% if videos|length != 1 %}s{% endif %}</div>
+<div class="cards-grid">
+  {% for v in videos %}
+  {% set yt_id = v.yt_url.split('v=')[-1].split('&')[0] if 'v=' in v.yt_url else v.yt_url.split('/')[-1] %}
+  <div class="card">
+    <div class="card-thumb vid" style="padding:0;overflow:hidden">
+      <img src="https://img.youtube.com/vi/{{ yt_id }}/mqdefault.jpg"
+           alt="{{ v.title }}" style="width:100%;height:100%;object-fit:cover"/>
+    </div>
+    <div class="card-body">
+      <div class="card-title">{{ v.title }}</div>
+      <div class="card-meta">
+        <span class="tag">{{ v.subject }}</span>
+        <span class="tag purple">{{ v.level }}</span>
+        {% if v.duration %}<span class="tag">{{ v.duration }}</span>{% endif %}
+      </div>
+      {% if v.desc %}<div class="card-desc">{{ v.desc[:100] }}{% if v.desc|length > 100 %}...{% endif %}</div>{% endif %}
+      <div class="card-footer">
+        <span class="dl-count">▶ Free video</span>
+        <a href="{{ v.yt_url }}" target="_blank" class="btn-dl green">Watch now</a>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+  <div class="empty-icon">🎬</div>
+  <h3>No videos found</h3>
+  <p>Try a different search or check back later.</p>
+  <a href="{{ url_for('videos') }}" class="btn-outline">Clear filters</a>
+</div>
+{% endif %}
+
+{% endblock %}

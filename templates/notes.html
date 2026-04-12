@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Notes Library — QuickNotes{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <h2>Notes library</h2>
+  <p>Free downloadable study notes — search, filter, and download instantly</p>
+</div>
+
+<form method="GET" action="{{ url_for('notes') }}" class="toolbar">
+  <div class="search-wrap">
+    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+    </svg>
+    <input type="text" name="search" value="{{ search }}" placeholder="Search QuickNotes by title, subject..."/>
+  </div>
+  <select name="subject" onchange="this.form.submit()">
+    <option value="all" {% if sel_subj=='all' %}selected{% endif %}>All subjects</option>
+    {% for s in subjects %}
+    <option value="{{ s.subject }}" {% if sel_subj==s.subject %}selected{% endif %}>{{ s.subject }}</option>
+    {% endfor %}
+  </select>
+  <select name="level" onchange="this.form.submit()">
+    <option value="all"        {% if sel_level=='all'        %}selected{% endif %}>All levels</option>
+    <option value="School"     {% if sel_level=='School'     %}selected{% endif %}>School</option>
+    <option value="College"    {% if sel_level=='College'    %}selected{% endif %}>College</option>
+    <option value="Competitive"{% if sel_level=='Competitive'%}selected{% endif %}>Competitive</option>
+  </select>
+  <button type="submit" class="btn-solid" style="padding:9px 18px">Search</button>
+</form>
+
+{% if notes %}
+<div class="results-info">Showing {{ notes|length }} note{% if notes|length != 1 %}s{% endif %}</div>
+<div class="cards-grid">
+  {% for n in notes %}
+  <div class="card">
+    <div class="card-thumb {{ n.filetype }}">{{ n.filetype | upper }}</div>
+    <div class="card-body">
+      <div class="card-title">{{ n.title }}</div>
+      <div class="card-meta">
+        <span class="tag">{{ n.subject }}</span>
+        <span class="tag green">{{ n.level }}</span>
+        <span class="tag grey">{{ n.filetype | upper }}</span>
+      </div>
+      {% if n.desc %}<div class="card-desc">{{ n.desc[:100] }}{% if n.desc|length > 100 %}...{% endif %}</div>{% endif %}
+      <div class="card-footer">
+        <span class="dl-count">⬇ {{ n.downloads }} downloads</span>
+        <a href="{{ url_for('download', note_id=n.id) }}" class="btn-dl">Download free</a>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+  <div class="empty-icon">🔍</div>
+  <h3>No notes found</h3>
+  <p>Try a different search term or filter.</p>
+  <a href="{{ url_for('notes') }}" class="btn-outline">Clear filters</a>
+</div>
+{% endif %}
+
+{% endblock %}
