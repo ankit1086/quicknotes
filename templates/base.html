@@ -7,19 +7,18 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"/>
 </head>
 <body>
-
 <nav class="nav">
   <a href="{{ url_for('home') }}" class="brand">Quick<span>Notes</span></a>
   <div class="nav-links">
-    <a href="{{ url_for('home') }}"          class="nb {% if request.endpoint=='home'          %}active{% endif %}">Home</a>
-    <a href="{{ url_for('notes') }}"         class="nb {% if request.endpoint=='notes'         %}active{% endif %}">Notes</a>
-    <a href="{{ url_for('videos') }}"        class="nb {% if request.endpoint=='videos'        %}active{% endif %}">Videos</a>
+    <a href="{{ url_for('home') }}" class="nb {% if request.endpoint=='home' %}active{% endif %}">Home</a>
+    <a href="{{ url_for('notes') }}" class="nb {% if request.endpoint=='notes' %}active{% endif %}">Notes</a>
+    <a href="{{ url_for('videos') }}" class="nb {% if request.endpoint=='videos' %}active{% endif %}">Videos</a>
     <a href="{{ url_for('request_notes') }}" class="nb {% if request.endpoint=='request_notes' %}active{% endif %}" style="color:#16a34a;border-color:#bbf7d0">Request notes</a>
     {% if session.user_id %}
       <span class="nb" style="color:#2563eb;border-color:#bfdbfe;cursor:default">👤 {{ session.user_name }}</span>
       <a href="{{ url_for('logout') }}" class="nb">Logout</a>
     {% else %}
-      <a href="{{ url_for('login') }}"  class="nb {% if request.endpoint=='login'  %}active{% endif %}">Login</a>
+      <a href="{{ url_for('login') }}" class="nb {% if request.endpoint=='login' %}active{% endif %}">Login</a>
       <a href="{{ url_for('signup') }}" class="nb {% if request.endpoint=='signup' %}active{% endif %}" style="background:#2563eb;color:#fff;border-color:#2563eb">Sign up</a>
     {% endif %}
     {% if session.admin %}
@@ -28,18 +27,14 @@
     {% endif %}
   </div>
 </nav>
-
 {% with messages = get_flashed_messages(with_categories=true) %}
   {% for category, message in messages %}
     <div class="flash {{ category }}">{{ message }}</div>
   {% endfor %}
 {% endwith %}
-
 {% block content %}{% endblock %}
-
 <footer class="footer">
   <p>QuickNotes &mdash; Free study notes &amp; videos for every student &nbsp;|&nbsp; 100% Free Forever</p>
 </footer>
-
 </body>
 </html>
