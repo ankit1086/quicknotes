@@ -396,3 +396,220 @@ def admin_logout():
 
 if __name__ == "__main__":
     app.run(debug=True)
+
+# ─── RATINGS ──────────────────────────────────────────────
+def init_extra_db():
+    db = get_db()
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS ratings (
+            id      INTEGER PRIMARY KEY AUTOINCREMENT,
+            note_id INTEGER NOT NULL,
+            user_id INTEGER,
+            stars   INTEGER NOT NULL,
+            created TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS comments (
+            id      INTEGER PRIMARY KEY AUTOINCREMENT,
+            note_id INTEGER NOT NULL,
+            user_id INTEGER,
+            name    TEXT,
+            comment TEXT NOT NULL,
+            created TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS bookmarks (
+            id      INTEGER PRIMARY KEY AUTOINCREMENT,
+            note_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            created TEXT DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(note_id, user_id)
+        )
+    """)
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS contacts (
+            id      INTEGER PRIMARY KEY AUTOINCREMENT,
+            name    TEXT NOT NULL,
+            email   TEXT NOT NULL,
+            message TEXT NOT NULL,
+            created TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    db.commit()
+    db.close()
+
+init_extra_db()
+
+@app.route("/note/<int:note_id>")
+def note_detail(note_id):
+    db   = get_db()
+    note = db.execute("SELECT * FROM notes WHERE id = ?", (note_id,)).fetchone()
+    if not note:
+        db.close()
+        return "Note not found", 404
+    comments = db.execute("SELECT * FROM comments WHERE note_id = ? ORDER BY created DESC", (note_id,)).fetchall()
+    ratings  = db.execute("SELECT AVG(stars) as avg, COUNT(*) as cnt FROM ratings WHERE note_id = ?", (note_id,)).fetchone()
+    user_rating = None
+    bookmarked  = False
+    if current_user():
+        ur = db.execute("SELECT stars FROM ratings WHERE note_id=? AND user_id=?", (note_id, current_user())).fetchone()
+        user_rating = ur["stars"] if ur else None
+        bm = db.execute("SELECT id FROM bookmarks WHERE note_id=? AND user_id=?", (note_id, current_user())).fetchone()
+        bookmarked = bm is not None
+    db.close()
+    avg_stars = round(ratings["avg"] or 0, 1)
+    return render_template("note_detail.html", note=note, comments=comments,
+                           avg_stars=avg_stars, rating_count=ratings["cnt"],
+                           user_rating=user_rating, bookmarked=bookmarked)
+
+@app.route("/rate-note/<int:note_id>", methods=["POST"])
+def rate_note(note_id):
+    if not current_user():
+        flash("Please login to rate notes.", "error")
+        return redirect(url_for("note_detail", note_id=note_id))
+    stars = int(request.form.get("stars", 5))
+    db    = get_db()
+    existing = db.execute("SELECT id FROM ratings WHERE note_id=? AND user_id=?", (note_id, current_user())).fetchone()
+    if existing:
+        db.execute("UPDATE ratings SET stars=? WHERE note_id=? AND user_id=?", (stars, note_id, current_user()))
+    else:
+        db.execute("INSERT INTO ratings (note_id, user_id, stars) VALUES (?,?,?)", (note_id, current_user(), stars))
+    db.commit()
+    db.close()
+    flash(f"You rated this {stars} stars!", "success")
+    return redirect(url_for("note_detail", note_id=note_id))
+
+@app.route("/comment-note/<int:note_id>", methods=["POST"])
+def comment_note(note_id):
+    name    = request.form.get("name", "Anonymous").strip()
+    comment = request.form.get("comment", "").strip()
+    if not comment:
+        flash("Please write a comment.", "error")
+        return redirect(url_for("note_detail", note_id=note_id))
+    if current_user():
+        db   = get_db()
+        user = db.execute("SELECT name FROM users WHERE id=?", (current_user(),)).fetchone()
+        name = user["name"] if user else name
+        db.close()
+    db = get_db()
+    db.execute("INSERT INTO comments (note_id, user_id, name, comment) VALUES (?,?,?,?)",
+               (note_id, current_user(), name or "Anonymous", comment))
+    db.commit()
+    db.close()
+    flash("Comment added!", "success")
+    return redirect(url_for("note_detail", note_id=note_id))
+
+@app.route("/bookmark/<int:note_id>", methods=["POST"])
+def toggle_bookmark(note_id):
+    if not current_user():
+        flash("Please login to bookmark notes.", "error")
+        return redirect(url_for("note_detail", note_id=note_id))
+    db = get_db()
+    existing = db.execute("SELECT id FROM bookmarks WHERE note_id=? AND user_id=?", (note_id, current_user())).fetchone()
+    if existing:
+        db.execute("DELETE FROM bookmarks WHERE note_id=? AND user_id=?", (note_id, current_user()))
+        flash("Bookmark removed.", "success")
+    else:
+        db.execute("INSERT INTO bookmarks (note_id, user_id) VALUES (?,?)", (note_id, current_user()))
+        flash("Note bookmarked!", "success")
+    db.commit()
+    db.close()
+    return redirect(url_for("note_detail", note_id=note_id))
+
+@app.route("/my-bookmarks")
+def my_bookmarks():
+    if not current_user():
+        flash("Please login to see your bookmarks.", "error")
+        return redirect(url_for("login"))
+    db    = get_db()
+    notes = db.execute("""
+        SELECT notes.* FROM notes
+        JOIN bookmarks ON notes.id = bookmarks.note_id
+        WHERE bookmarks.user_id = ?
+        ORDER BY bookmarks.created DESC
+    """, (current_user(),)).fetchall()
+    db.close()
+    return render_template("bookmarks.html", notes=notes)
+
+@app.route("/contact", methods=["GET", "POST"])
+def contact():
+    if request.method == "POST":
+        name    = request.form.get("name", "").strip()
+        email   = request.form.get("email", "").strip()
+        message = request.form.get("message", "").strip()
+        if not name or not email or not message:
+            flash("Please fill in all fields.", "error")
+            return redirect(url_for("contact"))
+        db = get_db()
+        db.execute("INSERT INTO contacts (name, email, message) VALUES (?,?,?)", (name, email, message))
+        db.commit()
+        db.close()
+        flash("Message sent! We will reply soon.", "success")
+        return redirect(url_for("contact"))
+    return render_template("contact.html")
+
+@app.route("/about")
+def about():
+    return render_template("about.html")
+
+@app.route("/faq")
+def faq():
+    return render_template("faq.html")
+
+# ─── AI STUDY ASSISTANT ───────────────────────────────────
+import json
+try:
+    import urllib.request
+except:
+    pass
+
+@app.route("/ai-assistant")
+def ai_assistant():
+    return render_template("ai_assistant.html")
+
+@app.route("/api/ask-ai", methods=["POST"])
+def ask_ai():
+    try:
+        data    = request.get_json()
+        message = data.get("message", "").strip()
+        history = data.get("history", [])
+        if not message:
+            return jsonify({"error": "Please type a question."}), 400
+
+        # Build messages for Claude API
+        messages = []
+        for h in history[-10:]:  # last 10 messages for context
+            messages.append({"role": h["role"], "content": h["content"]})
+        messages.append({"role": "user", "content": message})
+
+        # Call Claude API
+        api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+        if not api_key:
+            return jsonify({"reply": "AI Assistant is not configured yet. Please add your API key in Render settings."}), 200
+
+        payload = json.dumps({
+            "model": "claude-haiku-4-5-20251001",
+            "max_tokens": 1024,
+            "system": "You are a helpful study assistant for students on QuickNotes platform. Help students understand subjects like Maths, Physics, Chemistry, Biology, History, English, Computer Science, Economics, Geography, Political Science, B.Sc Nursing and more. Explain concepts simply and clearly. Give examples. Be encouraging and supportive. Keep answers concise but complete. If a student asks something unrelated to studying, politely redirect them to study topics.",
+            "messages": messages
+        }).encode("utf-8")
+
+        req = urllib.request.Request(
+            "https://api.anthropic.com/v1/messages",
+            data=payload,
+            headers={
+                "Content-Type": "application/json",
+                "x-api-key": api_key,
+                "anthropic-version": "2023-06-01"
+            },
+            method="POST"
+        )
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            result = json.loads(resp.read().decode("utf-8"))
+            reply  = result["content"][0]["text"]
+            return jsonify({"reply": reply})
+
+    except Exception as e:
+        return jsonify({"reply": f"Sorry, I could not process your question. Please try again. Error: {str(e)}"}), 200
