@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% block title %}AI Study Assistant — QuickNotes{% endblock %}
+{% block content %}
+
+<div style="max-width:750px;margin:0 auto;padding:1.5rem;display:flex;flex-direction:column;height:calc(100vh - 140px)">
+
+  <!-- HEADER -->
+  <div style="background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:1rem 1.25rem;margin-bottom:1rem;display:flex;align-items:center;gap:12px">
+    <div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#2563eb,#7c3aed);display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;flex-shrink:0">🤖</div>
+    <div>
+      <div style="font-size:15px;font-weight:700">AI Study Assistant</div>
+      <div style="font-size:12px;color:#16a34a;display:flex;align-items:center;gap:4px">
+        <span style="width:7px;height:7px;background:#16a34a;border-radius:50%;display:inline-block"></span>
+        Online — Ask me anything about your studies!
+      </div>
+    </div>
+    <div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap">
+      <button onclick="quickAsk('Explain photosynthesis simply')"      class="quick-btn">Photosynthesis</button>
+      <button onclick="quickAsk('Solve quadratic equation x²+5x+6=0')" class="quick-btn">Quadratic eq.</button>
+      <button onclick="quickAsk('What is Newton first law of motion?')" class="quick-btn">Newton laws</button>
+    </div>
+  </div>
+
+  <!-- CHAT BOX -->
+  <div id="chat-box" style="flex:1;background:#f8fafc;border:1px solid #e5e7eb;border-radius:14px;padding:1rem;overflow-y:auto;margin-bottom:1rem;display:flex;flex-direction:column;gap:12px;min-height:300px">
+    <div style="display:flex;gap:10px;align-items:flex-start">
+      <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#2563eb,#7c3aed);display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;flex-shrink:0">🤖</div>
+      <div style="background:#fff;border:1px solid #e5e7eb;border-radius:0 12px 12px 12px;padding:10px 14px;max-width:85%">
+        <div style="font-size:13px;line-height:1.7;color:#1e293b">
+          Hello! I am your <strong>AI Study Assistant</strong> powered by Claude AI! 👋<br><br>
+          I can help you with:<br>
+          📐 <strong>Maths</strong> — equations, formulas, problems<br>
+          🔬 <strong>Science</strong> — Physics, Chemistry, Biology<br>
+          📚 <strong>All subjects</strong> — History, English, Economics and more<br>
+          🏥 <strong>B.Sc Nursing</strong> — medical concepts and topics<br><br>
+          Just type your question below and I will explain it clearly!
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- INPUT BOX -->
+  <div style="background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:10px;display:flex;gap:8px;align-items:flex-end">
+    <textarea id="user-input" placeholder="Ask any study question... e.g. Explain osmosis, Solve 2x+5=11, What is GDP?"
+      style="flex:1;border:none;outline:none;font-size:14px;resize:none;font-family:inherit;line-height:1.5;max-height:120px;min-height:44px;background:transparent;color:#1e293b"
+      rows="1" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+    <button id="send-btn" onclick="sendMessage()"
+      style="width:42px;height:42px;border-radius:10px;background:#2563eb;color:#fff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px">
+      ➤
+    </button>
+  </div>
+  <div style="text-align:center;font-size:11px;color:#94a3b8;margin-top:6px">Powered by Claude AI — For study purposes only</div>
+
+</div>
+
+<style>
+.quick-btn{padding:4px 10px;font-size:11px;border:1px solid #e5e7eb;border-radius:20px;background:#fff;color:#475569;cursor:pointer;white-space:nowrap}
+.quick-btn:hover{background:#eff6ff;color:#2563eb;border-color:#bfdbfe}
+.typing-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#94a3b8;animation:bounce 1s infinite}
+.typing-dot:nth-child(2){animation-delay:0.15s}
+.typing-dot:nth-child(3){animation-delay:0.3s}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+</style>
+
+<script>
+let chatHistory = [];
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+}
+
+function quickAsk(q) {
+  document.getElementById('user-input').value = q;
+  sendMessage();
+}
+
+function addMessage(role, text) {
+  const box  = document.getElementById('chat-box');
+  const isAI = role === 'assistant';
+  const div  = document.createElement('div');
+  div.style.cssText = 'display:flex;gap:10px;align-items:flex-start;' + (isAI ? '' : 'flex-direction:row-reverse');
+  const avatar = document.createElement('div');
+  avatar.style.cssText = 'width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;flex-shrink:0;' + (isAI ? 'background:linear-gradient(135deg,#2563eb,#7c3aed)' : 'background:#16a34a');
+  avatar.textContent = isAI ? '🤖' : '👤';
+  const bubble = document.createElement('div');
+  bubble.style.cssText = 'padding:10px 14px;max-width:85%;font-size:13px;line-height:1.7;' + (isAI ? 'background:#fff;border:1px solid #e5e7eb;border-radius:0 12px 12px 12px;color:#1e293b' : 'background:#2563eb;color:#fff;border-radius:12px 0 12px 12px');
+  bubble.innerHTML = text.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  div.appendChild(avatar);
+  div.appendChild(bubble);
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+  return bubble;
+}
+
+function showTyping() {
+  const box = document.getElementById('chat-box');
+  const div = document.createElement('div');
+  div.id = 'typing-indicator';
+  div.style.cssText = 'display:flex;gap:10px;align-items:flex-start';
+  div.innerHTML = `
+    <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#2563eb,#7c3aed);display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;flex-shrink:0">🤖</div>
+    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:0 12px 12px 12px;padding:12px 16px;display:flex;gap:4px;align-items:center">
+      <span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>
+    </div>`;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+
+function removeTyping() {
+  const el = document.getElementById('typing-indicator');
+  if (el) el.remove();
+}
+
+async function sendMessage() {
+  const input = document.getElementById('user-input');
+  const msg   = input.value.trim();
+  if (!msg) return;
+
+  input.value = '';
+  input.style.height = '44px';
+  document.getElementById('send-btn').disabled = true;
+
+  addMessage('user', msg);
+  chatHistory.push({ role: 'user', content: msg });
+  showTyping();
+
+  try {
+    const res  = await fetch('/api/ask-ai', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ message: msg, history: chatHistory.slice(0, -1) })
+    });
+    const data = await res.json();
+    removeTyping();
+    const reply = data.reply || 'Sorry, I could not answer that. Please try again.';
+    addMessage('assistant', reply);
+    chatHistory.push({ role: 'assistant', content: reply });
+  } catch (e) {
+    removeTyping();
+    addMessage('assistant', 'Sorry, something went wrong. Please check your internet and try again.');
+  }
+
+  document.getElementById('send-btn').disabled = false;
+  document.getElementById('user-input').focus();
+}
+</script>
+
+{% endblock %}
