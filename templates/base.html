@@ -7,34 +7,101 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"/>
 </head>
 <body>
+
 <nav class="nav">
   <a href="{{ url_for('home') }}" class="brand">Quick<span>Notes</span></a>
   <div class="nav-links">
-    <a href="{{ url_for('home') }}" class="nb {% if request.endpoint=='home' %}active{% endif %}">Home</a>
-    <a href="{{ url_for('notes') }}" class="nb {% if request.endpoint=='notes' %}active{% endif %}">Notes</a>
-    <a href="{{ url_for('videos') }}" class="nb {% if request.endpoint=='videos' %}active{% endif %}">Videos</a>
+    <a href="{{ url_for('home') }}"          class="nb {% if request.endpoint=='home'          %}active{% endif %}">Home</a>
+    <a href="{{ url_for('notes') }}"         class="nb {% if request.endpoint=='notes'         %}active{% endif %}">Notes</a>
+    <a href="{{ url_for('videos') }}"        class="nb {% if request.endpoint=='videos'        %}active{% endif %}">Videos</a>
     <a href="{{ url_for('request_notes') }}" class="nb {% if request.endpoint=='request_notes' %}active{% endif %}" style="color:#16a34a;border-color:#bbf7d0">Request notes</a>
+    <a href="{{ url_for('ai_assistant') }}"  class="nb {% if request.endpoint=='ai_assistant'  %}active{% endif %}" style="color:#7c3aed;border-color:#ddd6fe;font-weight:600">🤖 AI Assistant</a>
+    <a href="{{ url_for('about') }}"         class="nb {% if request.endpoint=='about'         %}active{% endif %}">About</a>
+    <a href="{{ url_for('contact') }}"       class="nb {% if request.endpoint=='contact'       %}active{% endif %}">Contact</a>
     {% if session.user_id %}
+      <a href="{{ url_for('my_bookmarks') }}" class="nb {% if request.endpoint=='my_bookmarks' %}active{% endif %}">🔖 Saved</a>
       <span class="nb" style="color:#2563eb;border-color:#bfdbfe;cursor:default">👤 {{ session.user_name }}</span>
       <a href="{{ url_for('logout') }}" class="nb">Logout</a>
     {% else %}
-      <a href="{{ url_for('login') }}" class="nb {% if request.endpoint=='login' %}active{% endif %}">Login</a>
+      <a href="{{ url_for('login') }}"  class="nb {% if request.endpoint=='login'  %}active{% endif %}">Login</a>
       <a href="{{ url_for('signup') }}" class="nb {% if request.endpoint=='signup' %}active{% endif %}" style="background:#2563eb;color:#fff;border-color:#2563eb">Sign up</a>
     {% endif %}
     {% if session.admin %}
-      <a href="{{ url_for('admin_panel') }}" class="nb admin-btn">Admin panel</a>
+      <a href="{{ url_for('admin_panel') }}"  class="nb admin-btn">Admin panel</a>
       <a href="{{ url_for('admin_logout') }}" class="nb" style="font-size:12px;color:#dc2626;border-color:#fca5a5">Sign out</a>
     {% endif %}
   </div>
 </nav>
+
 {% with messages = get_flashed_messages(with_categories=true) %}
   {% for category, message in messages %}
     <div class="flash {{ category }}">{{ message }}</div>
   {% endfor %}
 {% endwith %}
+
 {% block content %}{% endblock %}
+
 <footer class="footer">
-  <p>QuickNotes &mdash; Free study notes &amp; videos for every student &nbsp;|&nbsp; 100% Free Forever</p>
+  <div style="max-width:900px;margin:0 auto">
+
+    <!-- FOOTER LINKS -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1.5rem;margin-bottom:1.5rem;text-align:left">
+      <div>
+        <div style="font-size:15px;font-weight:700;color:var(--text,#1a1a1a);margin-bottom:10px">Quick<span style="color:#2563eb">Notes</span></div>
+        <p style="font-size:12px;color:#94a3b8;line-height:1.7">Free study notes and videos for every student. 100% free forever.</p>
+      </div>
+      <div>
+        <div style="font-size:13px;font-weight:600;color:#475569;margin-bottom:8px">Pages</div>
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <a href="{{ url_for('home') }}"    style="font-size:12px;color:#94a3b8;text-decoration:none">Home</a>
+          <a href="{{ url_for('notes') }}"   style="font-size:12px;color:#94a3b8;text-decoration:none">Notes</a>
+          <a href="{{ url_for('videos') }}"  style="font-size:12px;color:#94a3b8;text-decoration:none">Videos</a>
+          <a href="{{ url_for('request_notes') }}" style="font-size:12px;color:#94a3b8;text-decoration:none">Request notes</a>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:13px;font-weight:600;color:#475569;margin-bottom:8px">Company</div>
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <a href="{{ url_for('about') }}"   style="font-size:12px;color:#94a3b8;text-decoration:none">About us</a>
+          <a href="{{ url_for('faq') }}"     style="font-size:12px;color:#94a3b8;text-decoration:none">FAQ</a>
+          <a href="{{ url_for('contact') }}" style="font-size:12px;color:#94a3b8;text-decoration:none">Contact us</a>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:13px;font-weight:600;color:#475569;margin-bottom:10px">Follow us</div>
+        <div style="display:flex;flex-direction:column;gap:7px">
+          <!-- CHANGE THESE LINKS TO YOUR ACTUAL SOCIAL MEDIA LINKS -->
+          <a href="https://wa.me/919999999999" target="_blank"
+             style="display:flex;align-items:center;gap:7px;font-size:12px;color:#25d366;text-decoration:none;font-weight:500">
+            <span style="width:22px;height:22px;background:#25d366;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700">W</span>
+            WhatsApp
+          </a>
+          <a href="https://t.me/quicknotes" target="_blank"
+             style="display:flex;align-items:center;gap:7px;font-size:12px;color:#0088cc;text-decoration:none;font-weight:500">
+            <span style="width:22px;height:22px;background:#0088cc;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700">T</span>
+            Telegram
+          </a>
+          <a href="https://instagram.com/quicknotes" target="_blank"
+             style="display:flex;align-items:center;gap:7px;font-size:12px;color:#e1306c;text-decoration:none;font-weight:500">
+            <span style="width:22px;height:22px;background:#e1306c;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700">I</span>
+            Instagram
+          </a>
+          <a href="https://youtube.com/@quicknotes" target="_blank"
+             style="display:flex;align-items:center;gap:7px;font-size:12px;color:#ff0000;text-decoration:none;font-weight:500">
+            <span style="width:22px;height:22px;background:#ff0000;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700">Y</span>
+            YouTube
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- BOTTOM BAR -->
+    <div style="border-top:1px solid #e5e7eb;padding-top:1rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <p style="font-size:12px;color:#94a3b8">© 2025 QuickNotes — Free study platform for every student</p>
+      <p style="font-size:12px;color:#94a3b8">100% Free Forever ❤️</p>
+    </div>
+  </div>
 </footer>
+
 </body>
 </html>
